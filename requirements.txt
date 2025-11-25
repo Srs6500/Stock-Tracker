@@ -1,0 +1,7 @@
+streamlit>=1.28.0
+polygon-api-client>=1.13.0
+plotly>=5.17.0
+pandas>=2.1.0
+sqlmodel>=0.0.14
+python-dotenv>=1.0.0
+
