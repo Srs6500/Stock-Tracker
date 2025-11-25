@@ -61,6 +61,7 @@ The app will open in your browser at `http://localhost:8501`
 ├── database.py            # Database models and connection
 ├── api_client.py          # Polygon API integration
 ├── utils.py               # Data processing utilities
+├── charts.py              # Plotly chart generation
 ├── requirements.txt       # Python dependencies
 ├── secrets.toml.example   # API key template
 └── tsla_data.db          # SQLite database (created automatically)
@@ -71,4 +72,3 @@ The app will open in your browser at `http://localhost:8501`
 - Database file (`tsla_data.db`) is created automatically on first run
 - Free Polygon tier has rate limits; the app caches data to minimize API calls
 - Market status shows: Open (green), Closed (red), After Hours (orange)
-
