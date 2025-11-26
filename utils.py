@@ -1,14 +1,24 @@
 """
 Data processing utilities and main data fetching function.
 Combines database caching with Polygon API calls for optimal performance.
+Supports both TSLA-specific (legacy) and multi-stock operations.
 """
 
 import pandas as pd
 from datetime import date, datetime, timedelta
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, List
 import streamlit as st
-from database import get_session, save_daily_data, get_historical_data, get_latest_date
+from database import (
+    get_session, 
+    save_daily_data, 
+    get_historical_data, 
+    get_latest_date,
+    save_stock_daily_data,
+    get_stock_historical_data,
+    get_latest_stock_date
+)
 from api_client import get_polygon_client, fetch_historical_data, fetch_live_snapshot
+from data_processor import StockDataProcessor
 
 
 @st.cache_data(ttl=60)  # Cache for 60 seconds to prevent API spam
@@ -193,4 +203,79 @@ def get_market_status_color(status: str) -> str:
     elif "after" in status_lower or "extended" in status_lower:
         return "#ff8800"  # Orange
     return "#888888"  # Gray (unknown)
+
+
+# ============================================================================
+# Multi-Stock Support Functions (Bloomberg-lite features)
+# ============================================================================
+
+def get_stock_data(symbol: str = "TSLA", days: int = 45) -> Tuple[pd.DataFrame, Dict[str, Any], str]:
+    """
+    Get stock data for any symbol (multi-stock support).
+    Uses the new data processor for unified handling.
+    Defaults to TSLA for backward compatibility.
+    
+    Args:
+        symbol: Stock ticker symbol (default: "TSLA")
+        days: Number of days of historical data
+    
+    Returns:
+        Tuple of (DataFrame, live_data_dict, status_message)
+    """
+    processor = StockDataProcessor()
+    return processor.get_stock_data_with_cache(symbol.upper(), days=days)
+
+
+def get_watchlist_stocks_data(symbols: List[str]) -> Dict[str, Dict[str, Any]]:
+    """
+    Get live data for multiple stocks in watchlist.
+    
+    Args:
+        symbols: List of stock ticker symbols
+    
+    Returns:
+        Dictionary mapping symbol to its live data
+    """
+    processor = StockDataProcessor()
+    return processor.get_multiple_stocks_live(symbols)
+
+
+def get_default_watchlist() -> List[str]:
+    """
+    Get default watchlist stocks.
+    TSLA is always first (primary focus).
+    
+    Returns:
+        List of default stock symbols
+    """
+    return ["TSLA", "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META"]
+
+
+def format_stock_name(symbol: str) -> str:
+    """
+    Format stock symbol with company name (if known).
+    
+    Args:
+        symbol: Stock ticker symbol
+    
+    Returns:
+        Formatted string with symbol and name
+    """
+    stock_names = {
+        "TSLA": "Tesla",
+        "AAPL": "Apple",
+        "MSFT": "Microsoft",
+        "GOOGL": "Google",
+        "AMZN": "Amazon",
+        "NVDA": "NVIDIA",
+        "META": "Meta",
+        "NFLX": "Netflix",
+        "AMD": "AMD",
+        "INTC": "Intel"
+    }
+    
+    name = stock_names.get(symbol.upper(), "")
+    if name:
+        return f"{symbol.upper()} ({name})"
+    return symbol.upper()
 
