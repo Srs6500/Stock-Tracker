@@ -18,6 +18,7 @@ from utils import (
 from charts import create_candlestick_chart
 from watchlist_ui import render_watchlist_panel, get_selected_symbol, set_selected_symbol
 from news_ui import render_news_feed
+from portfolio_ui import render_portfolio_panel
 
 # Page configuration
 st.set_page_config(
@@ -244,13 +245,18 @@ def main():
             st.caption("Updates every 15 seconds")
     
     # Bloomberg-lite Multi-Panel Layout
-    # Left: Watchlist | Right: Main Chart + News
+    # Left: Watchlist + Portfolio | Right: Main Chart + News
     col_watchlist, col_main = st.columns([1, 3])
     
     with col_watchlist:
         # Watchlist Panel
         selected_symbol = render_watchlist_panel(selected_symbol)
         set_selected_symbol(selected_symbol)
+        
+        # Portfolio Panel (tabbed or expandable)
+        st.markdown("<br>")
+        with st.expander("💼 Portfolio", expanded=False):
+            render_portfolio_panel()
         
         # News Feed (compact in watchlist column)
         st.markdown("<br>")
