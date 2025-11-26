@@ -1,15 +1,27 @@
 """
-Plotly chart generation for TSLA stock visualization.
-Creates candlestick charts with volume bars overlay.
+Plotly chart generation for stock visualization.
+Creates candlestick charts with volume bars and technical indicators.
+Supports any stock symbol (not just TSLA).
 """
 
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pandas as pd
-from typing import Optional
+from typing import Optional, Dict, Any
 
 
-def create_candlestick_chart(df: pd.DataFrame, days: int = 30) -> go.Figure:
+def calculate_sma(data: pd.Series, window: int) -> pd.Series:
+    """Calculate Simple Moving Average."""
+    return data.rolling(window=window).mean()
+
+
+def calculate_ema(data: pd.Series, window: int) -> pd.Series:
+    """Calculate Exponential Moving Average."""
+    return data.ewm(span=window, adjust=False).mean()
+
+
+def create_candlestick_chart(df: pd.DataFrame, days: int = 30, symbol: str = "TSLA", 
+                            indicators: Optional[Dict[str, Any]] = None) -> go.Figure:
     """
     Create an interactive candlestick chart with volume bars for TSLA.
     
@@ -66,7 +78,7 @@ def create_candlestick_chart(df: pd.DataFrame, days: int = 30) -> go.Figure:
             high=chart_df["high"],
             low=chart_df["low"],
             close=chart_df["close"],
-            name="TSLA",
+            name=symbol.upper(),
             increasing_line_color="#00ff00",  # Green for up days
             decreasing_line_color="#ff0000",   # Red for down days
             increasing_fillcolor="#00ff00",
@@ -74,6 +86,47 @@ def create_candlestick_chart(df: pd.DataFrame, days: int = 30) -> go.Figure:
         ),
         row=1, col=1
     )
+    
+    # Technical Indicators - Moving Averages (calculated from data)
+    if len(chart_df) >= 20:
+        # SMA 20
+        sma20 = calculate_sma(chart_df["close"], 20)
+        fig.add_trace(
+            go.Scatter(
+                x=dates,
+                y=sma20,
+                name="SMA 20",
+                line=dict(color="#ffaa00", width=1.5),
+                opacity=0.8
+            ),
+            row=1, col=1
+        )
+    
+    if len(chart_df) >= 50:
+        # SMA 50
+        sma50 = calculate_sma(chart_df["close"], 50)
+        fig.add_trace(
+            go.Scatter(
+                x=dates,
+                y=sma50,
+                name="SMA 50",
+                line=dict(color="#00aaff", width=1.5),
+                opacity=0.8
+            ),
+            row=1, col=1
+        )
+    
+    # Optional: Add RSI if available from API
+    if indicators and "RSI" in indicators:
+        try:
+            rsi_data = indicators["RSI"]
+            if "Technical Analysis: RSI" in rsi_data:
+                rsi_values = rsi_data["Technical Analysis: RSI"]
+                # Convert to DataFrame and plot (simplified - would need proper date matching)
+                # For now, we'll skip RSI overlay as it requires date alignment
+                pass
+        except:
+            pass  # Silently skip if RSI data is malformed
     
     # Volume bars
     colors = []
@@ -116,7 +169,7 @@ def create_candlestick_chart(df: pd.DataFrame, days: int = 30) -> go.Figure:
         hovermode="x unified",
         dragmode="zoom",  # Enable zoom/pan
         title=dict(
-            text="TSLA – Last 30 Trading Days",
+            text=f"{symbol.upper()} – Last 30 Trading Days",
             font=dict(size=20, color="#ffffff"),
             x=0.5,
             xanchor="center"

@@ -288,9 +288,14 @@ def main():
             # Spacer
             st.markdown("<br><br>", unsafe_allow_html=True)
             
-            # Chart
+            # Chart with technical indicators
             if not df.empty:
-                fig = create_candlestick_chart(df, days=30)
+                # Get technical indicators if available
+                from data_processor import StockDataProcessor
+                processor = StockDataProcessor()
+                indicators = processor.get_technical_indicators_data(selected_symbol, ['RSI', 'MACD'])
+                
+                fig = create_candlestick_chart(df, days=30, symbol=selected_symbol, indicators=indicators)
                 chart_filename = f"{selected_symbol.lower()}_chart"
                 st.plotly_chart(
                     fig, 
