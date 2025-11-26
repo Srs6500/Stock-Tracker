@@ -1,18 +1,23 @@
 """
-TSLA Pulse - Real-Time Stock Dashboard
+Stock Pulse - Real-Time Stock Dashboard (Bloomberg-lite)
 Main Streamlit application entry point.
+Supports multi-stock watchlist with TSLA as primary focus.
 """
 
 import streamlit as st
 import pandas as pd
 from utils import (
-    get_historical_and_live,
+    get_historical_and_live,  # Legacy TSLA function (backward compatible)
+    get_stock_data,  # New multi-stock function
     format_currency,
     format_volume,
     calculate_change,
-    get_market_status_color
+    get_market_status_color,
+    format_stock_name
 )
 from charts import create_candlestick_chart
+from watchlist_ui import render_watchlist_panel, get_selected_symbol, set_selected_symbol
+from news_ui import render_news_feed
 
 # Page configuration
 st.set_page_config(
@@ -223,9 +228,11 @@ def display_market_status(status: str):
 
 
 def main():
-    """Main application function."""
-    # Title
-    st.markdown('<h1 class="main-title">⚡ TSLA Pulse</h1>', unsafe_allow_html=True)
+    """Main application function with Bloomberg-lite multi-panel layout."""
+    # Title - Update to reflect multi-stock support
+    selected_symbol = get_selected_symbol()
+    title_symbol = format_stock_name(selected_symbol) if selected_symbol != "TSLA" else "TSLA"
+    st.markdown(f'<h1 class="main-title">⚡ {title_symbol} Pulse</h1>', unsafe_allow_html=True)
     
     # Settings - Integrated into main UI (top right)
     col_left, col_right = st.columns([4, 1])
@@ -236,81 +243,96 @@ def main():
                 st.rerun_interval = 15  # Refresh every 15 seconds
             st.caption("Updates every 15 seconds")
     
-    # Fetch data
-    try:
-        df, live_data, status_msg = get_historical_and_live()
-        
-        # Display status message
-        st.markdown(f'<div class="status-message">{status_msg}</div>', unsafe_allow_html=True)
-        
-        # Check if we have data
-        if df.empty or not live_data:
-            st.warning("⚠️ No data available. Please check your API key configuration.")
-            return
-        
-        # Display price and change
-        current_price = live_data.get("current_price")
-        prev_close = live_data.get("prev_close")
-        display_price_and_change(current_price, prev_close)
-        
-        # Display market status
-        market_status = live_data.get("market_status", "unknown")
-        display_market_status(market_status)
-        
-        # Spacer
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        # Display metrics
-        display_metrics(live_data)
-        
-        # Spacer
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        
-        # Chart
-        if not df.empty:
-            fig = create_candlestick_chart(df, days=30)
-            st.plotly_chart(
-                fig, 
-                use_container_width=True,
-                config={
-                    "displayModeBar": True,
-                    "displaylogo": False,
-                    "modeBarButtonsToRemove": ["lasso2d", "select2d"],
-                    # Keep default buttons (autoscale is default) and add reset
-                    "modeBarButtonsToAdd": ["resetScale2d"],
-                    "toImageButtonOptions": {
-                        "format": "png",
-                        "filename": "tsla_chart",
-                        "height": 600,
-                        "width": 1200,
-                        "scale": 1
-                    },
-                    "doubleClick": "reset",
-                    "doubleClickDelay": 300,
-                    "showTips": True,
-                    "responsive": True,
-                    "editable": False  # Prevent editing that might interfere
-                }
-            )
-        else:
-            st.info("📊 Chart data will appear once historical data is loaded.")
+    # Bloomberg-lite Multi-Panel Layout
+    # Left: Watchlist | Right: Main Chart + News
+    col_watchlist, col_main = st.columns([1, 3])
     
-    except KeyError as e:
-        st.error(f"🔑 Configuration Error: {str(e)}")
-        st.info("""
-        **Setup Instructions:**
-        1. Create a `.streamlit` folder in your project directory
-        2. Create `secrets.toml` inside `.streamlit`
-        3. Add your Polygon API key:
-           ```
-           POLYGON_API_KEY = "your_api_key_here"
-           ```
-        4. Get your free API key at: https://polygon.io/
-        """)
+    with col_watchlist:
+        # Watchlist Panel
+        selected_symbol = render_watchlist_panel(selected_symbol)
+        set_selected_symbol(selected_symbol)
+        
+        # News Feed (compact in watchlist column)
+        st.markdown("<br>")
+        render_news_feed(selected_symbol, limit=3)
     
-    except Exception as e:
-        st.error(f"❌ Error: {str(e)}")
-        st.info("The app encountered an error. Please check your API key and internet connection.")
+    with col_main:
+        # Main Chart Area
+        try:
+            # Use new multi-stock function (works for any symbol, defaults to TSLA)
+            df, live_data, status_msg = get_stock_data(selected_symbol)
+            
+            # Display status message
+            st.markdown(f'<div class="status-message">{status_msg}</div>', unsafe_allow_html=True)
+            
+            # Check if we have data
+            if df.empty or not live_data:
+                st.warning(f"⚠️ No data available for {selected_symbol}. Please check your API key configuration.")
+                return
+            
+            # Display price and change
+            current_price = live_data.get("current_price")
+            prev_close = live_data.get("prev_close")
+            display_price_and_change(current_price, prev_close)
+            
+            # Display market status
+            market_status = live_data.get("market_status", "unknown")
+            display_market_status(market_status)
+            
+            # Spacer
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            # Display metrics
+            display_metrics(live_data)
+            
+            # Spacer
+            st.markdown("<br><br>", unsafe_allow_html=True)
+            
+            # Chart
+            if not df.empty:
+                fig = create_candlestick_chart(df, days=30)
+                chart_filename = f"{selected_symbol.lower()}_chart"
+                st.plotly_chart(
+                    fig, 
+                    use_container_width=True,
+                    config={
+                        "displayModeBar": True,
+                        "displaylogo": False,
+                        "modeBarButtonsToRemove": ["lasso2d", "select2d"],
+                        "modeBarButtonsToAdd": ["resetScale2d"],
+                        "toImageButtonOptions": {
+                            "format": "png",
+                            "filename": chart_filename,
+                            "height": 600,
+                            "width": 1200,
+                            "scale": 1
+                        },
+                        "doubleClick": "reset",
+                        "doubleClickDelay": 300,
+                        "showTips": True,
+                        "responsive": True,
+                        "editable": False
+                    }
+                )
+            else:
+                st.info("📊 Chart data will appear once historical data is loaded.")
+        
+        except KeyError as e:
+            st.error(f"🔑 Configuration Error: {str(e)}")
+            st.info("""
+            **Setup Instructions:**
+            1. Create a `.streamlit` folder in your project directory
+            2. Create `secrets.toml` inside `.streamlit`
+            3. Add your Polygon API key:
+               ```
+               POLYGON_API_KEY = "your_api_key_here"
+               ```
+            4. Get your free API key at: https://polygon.io/
+            """)
+        
+        except Exception as e:
+            st.error(f"❌ Error: {str(e)}")
+            st.info("The app encountered an error. Please check your API key and internet connection.")
 
 
 if __name__ == "__main__":
