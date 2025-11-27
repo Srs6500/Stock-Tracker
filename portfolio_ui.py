@@ -11,8 +11,7 @@ from database import (
     get_portfolio,
     update_portfolio_quantity
 )
-from data_processor import StockDataProcessor
-from utils import format_currency, calculate_change
+from utils import format_currency, calculate_change, get_watchlist_stocks_data
 
 
 def render_portfolio_panel():
@@ -23,7 +22,6 @@ def render_portfolio_panel():
         None (updates session state)
     """
     session = get_session()
-    processor = StockDataProcessor()
     
     try:
         portfolio_items = get_portfolio(session)
@@ -52,7 +50,7 @@ def render_portfolio_panel():
         else:
             # Get current prices for all portfolio stocks
             symbols = [item.symbol for item in portfolio_items]
-            current_prices = processor.get_multiple_stocks_live(symbols)
+            current_prices = get_watchlist_stocks_data(symbols)
             
             # Calculate portfolio metrics
             total_cost = 0.0
