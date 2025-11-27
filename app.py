@@ -1,14 +1,12 @@
 """
-Stock Pulse - Real-Time Stock Dashboard (Bloomberg-lite)
-Main Streamlit application entry point.
-Supports multi-stock watchlist with TSLA as primary focus.
+Stock Pulse - Real-Time Stock Dashboard
+Clean, simplified version using only yfinance.
 """
 
 import streamlit as st
 import pandas as pd
 from utils import (
-    get_historical_and_live,  # Legacy TSLA function (backward compatible)
-    get_stock_data,  # New multi-stock function
+    get_stock_data,
     format_currency,
     format_volume,
     calculate_change,
@@ -17,99 +15,134 @@ from utils import (
 )
 from charts import create_candlestick_chart
 from watchlist_ui import render_watchlist_panel, get_selected_symbol, set_selected_symbol
-from news_ui import render_news_feed
-from portfolio_ui import render_portfolio_panel
 
 # Page configuration
 st.set_page_config(
-    page_title="TSLA Pulse",
-    page_icon="⚡",
+    page_title="StockTracker",
+    page_icon="📊",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for dark mode and Tesla-red accents
+# Custom CSS for Clean Dashboard Design
 st.markdown("""
 <style>
-    /* Main background */
+    /* Main background - Clean light gray */
     .stApp {
-        background-color: #0e1117;
-        color: #ffffff;
+        background-color: #f5f5f5;
+        color: #333333;
+        font-family: 'Segoe UI', 'Arial', sans-serif;
     }
     
-    /* Title styling */
-    .main-title {
-        font-size: 3.5rem;
-        font-weight: 700;
-        text-align: center;
-        background: linear-gradient(90deg, #ff0000, #ff4444);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+    /* Clean Dashboard Header */
+    .dashboard-header {
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 1rem;
         margin-bottom: 0.5rem;
-        text-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     
-    /* Price display */
-    .price-display {
-        font-size: 4rem;
+    .ticker-info {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .ticker-symbol {
+        font-size: 2rem;
         font-weight: 700;
-        text-align: center;
-        color: #ffffff;
-        margin: 1rem 0;
-        text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        color: #333333;
+        letter-spacing: 0.5px;
     }
     
-    /* Change indicator */
-    .change-positive {
-        color: #00ff00;
-        font-size: 1.5rem;
+    .ticker-price {
+        font-size: 2rem;
         font-weight: 600;
+        color: #333333;
+    }
+    
+    .ticker-change {
+        font-size: 1.1rem;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+    }
+    
+    .change-positive {
+        color: #28a745;
+        background-color: #d4edda;
     }
     
     .change-negative {
-        color: #ff0000;
-        font-size: 1.5rem;
-        font-weight: 600;
+        color: #dc3545;
+        background-color: #f8d7da;
     }
     
-    /* Metric boxes */
-    .metric-box {
-        background-color: #1e1e1e;
-        padding: 1rem;
-        border-radius: 10px;
-        border: 1px solid #333333;
+    .header-metric {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0 1rem;
+    }
+    
+    .header-metric-label {
+        font-size: 0.85rem;
+        color: #666666;
+        font-weight: 500;
+    }
+    
+    .header-metric-value {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #333333;
+    }
+    
+    /* Clean Dashboard Title */
+    .main-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #333333;
+        margin: 0 auto 1.5rem auto;
+        padding: 0;
         text-align: center;
+        letter-spacing: 1px;
+        width: 100%;
+        display: block;
     }
     
-    .metric-label {
-        color: #888888;
-        font-size: 0.9rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .metric-value {
-        color: #ffffff;
-        font-size: 1.5rem;
-        font-weight: 600;
-    }
-    
-    /* Market status badge */
-    .market-badge {
-        display: inline-block;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        margin: 0.5rem 0;
-    }
-    
-    /* Status message */
+    /* Status message - subtle */
     .status-message {
-        text-align: center;
-        color: #888888;
-        font-size: 0.9rem;
-        margin: 0.5rem 0;
+        color: #666666;
+        font-size: 0.85rem;
+        padding: 0.5rem 0;
+        text-align: left;
+    }
+    
+    /* Clean Dashboard Panel */
+    .dashboard-panel {
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: box-shadow 0.3s ease;
+    }
+    
+    .dashboard-panel:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    
+    .panel-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.25rem;
+        letter-spacing: 0.3px;
     }
     
     /* Hide Streamlit default elements */
@@ -122,186 +155,114 @@ st.markdown("""
         display: none;
     }
     
-    /* Settings expander styling */
-    .streamlit-expanderHeader {
-        background-color: #1e1e1e;
-        border: 1px solid #333333;
-        border-radius: 8px;
-        padding: 0.5rem;
-    }
+    /* Hide Streamlit's default search bar */
+    div[data-testid="stToolbar"] { display: none; }
     
-    .streamlit-expanderContent {
-        background-color: #1e1e1e;
-        border: 1px solid #333333;
-        border-radius: 8px;
-        padding: 1rem;
-        margin-top: 0.5rem;
-    }
+    /* Remove any default Streamlit dividers */
+    hr { display: none; }
+    .stHorizontalBlock hr { display: none; }
 </style>
 """, unsafe_allow_html=True)
 
 
-def display_price_and_change(current_price: float, prev_close: float):
-    """Display the main price with change indicator."""
+def display_dashboard_header(symbol: str, live_data: dict):
+    """Display clean dashboard header with ticker, price, and key metrics."""
+    if not live_data:
+        return
+    
+    current_price = live_data.get("current_price")
+    prev_close = live_data.get("prev_close")
+    today_high = live_data.get("today_high")
+    today_low = live_data.get("today_low")
+    today_volume = live_data.get("today_volume")
+    market_status = live_data.get("market_status", "unknown")
+    
     if current_price is None or prev_close is None:
-        st.markdown('<div class="price-display">N/A</div>', unsafe_allow_html=True)
         return
     
     change_amount, change_percent = calculate_change(current_price, prev_close)
-    arrow = "↑" if change_amount >= 0 else "↓"
-    color_class = "change-positive" if change_amount >= 0 else "change-negative"
+    arrow = "▲" if change_amount >= 0 else "▼"
+    change_class = "change-positive" if change_amount >= 0 else "change-negative"
     
-    st.markdown(f'<div class="price-display">{format_currency(current_price)}</div>', unsafe_allow_html=True)
-    st.markdown(
-        f'<div class="{color_class}" style="text-align: center;">'
-        f'{arrow} {format_currency(abs(change_amount))} ({change_percent:+.2f}%)'
-        f'</div>',
-        unsafe_allow_html=True
-    )
-
-
-def display_metrics(live_data: dict):
-    """Display metric boxes for High, Low, Prev Close, Volume."""
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.markdown(
-            f'<div class="metric-box">'
-            f'<div class="metric-label">Today\'s High</div>'
-            f'<div class="metric-value">{format_currency(live_data.get("today_high"))}</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-    
-    with col2:
-        st.markdown(
-            f'<div class="metric-box">'
-            f'<div class="metric-label">Today\'s Low</div>'
-            f'<div class="metric-value">{format_currency(live_data.get("today_low"))}</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-    
-    with col3:
-        st.markdown(
-            f'<div class="metric-box">'
-            f'<div class="metric-label">Prev Close</div>'
-            f'<div class="metric-value">{format_currency(live_data.get("prev_close"))}</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-    
-    with col4:
-        st.markdown(
-            f'<div class="metric-box">'
-            f'<div class="metric-label">Volume</div>'
-            f'<div class="metric-value">{format_volume(live_data.get("today_volume"))}</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-
-
-def display_market_status(status: str):
-    """Display market status badge."""
-    status_lower = status.lower()
-    
-    if "open" in status_lower:
-        status_text = "Market: ● Open"
-        color = "#00ff00"
-    elif "closed" in status_lower or "close" in status_lower:
-        status_text = "Market: ● Closed"
-        color = "#ff0000"
-    elif "after" in status_lower or "extended" in status_lower:
-        status_text = "Market: ● After Hours"
-        color = "#ff8800"
-    else:
-        status_text = "Market: ● Unknown"
-        color = "#888888"
-    
-    st.markdown(
-        f'<div style="text-align: center;">'
-        f'<span class="market-badge" style="background-color: {color}20; color: {color}; border: 1px solid {color};">'
-        f'{status_text}'
-        f'</span>'
-        f'</div>',
-        unsafe_allow_html=True
-    )
+    header_html = f"""
+    <div class="dashboard-header">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                <div class="ticker-symbol">{symbol.upper()}</div>
+                <div class="ticker-price">{format_currency(current_price)}</div>
+                <div class="ticker-change {change_class}">
+                    {arrow} {format_currency(abs(change_amount))} ({change_percent:+.2f}%)
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                <div class="header-metric">
+                    <div class="header-metric-label">High</div>
+                    <div class="header-metric-value" style="color: #28a745;">{format_currency(today_high) if today_high else "N/A"}</div>
+                </div>
+                <div class="header-metric">
+                    <div class="header-metric-label">Low</div>
+                    <div class="header-metric-value" style="color: #dc3545;">{format_currency(today_low) if today_low else "N/A"}</div>
+                </div>
+                <div class="header-metric">
+                    <div class="header-metric-label">Volume</div>
+                    <div class="header-metric-value">{format_volume(today_volume) if today_volume else "N/A"}</div>
+                </div>
+                <div class="header-metric">
+                    <div class="header-metric-label">Prev Close</div>
+                    <div class="header-metric-value">{format_currency(prev_close)}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    """
+    st.markdown(header_html, unsafe_allow_html=True)
 
 
 def main():
-    """Main application function with Bloomberg-lite multi-panel layout."""
-    # Title - Update to reflect multi-stock support
+    """Main application function with clean dashboard layout."""
     selected_symbol = get_selected_symbol()
-    title_symbol = format_stock_name(selected_symbol) if selected_symbol != "TSLA" else "TSLA"
-    st.markdown(f'<h1 class="main-title">⚡ {title_symbol} Pulse</h1>', unsafe_allow_html=True)
+    st.markdown(f'<div class="main-title">📊 StockTracker</div>', unsafe_allow_html=True)
     
-    # Settings - Integrated into main UI (top right)
-    col_left, col_right = st.columns([4, 1])
-    with col_right:
-        with st.expander("⚙️", expanded=False):
-            auto_refresh = st.checkbox("Auto-refresh (15s)", value=True, key="auto_refresh")
-            if auto_refresh:
-                st.rerun_interval = 15  # Refresh every 15 seconds
-            st.caption("Updates every 15 seconds")
-    
-    # Bloomberg-lite Multi-Panel Layout
-    # Left: Watchlist + Portfolio | Right: Main Chart + News
-    col_watchlist, col_main = st.columns([1, 3])
+    # Clean Dashboard Layout
+    col_watchlist, col_main = st.columns([1.3, 3.7])
     
     with col_watchlist:
         # Watchlist Panel
+        st.markdown('<div class="dashboard-panel">', unsafe_allow_html=True)
+        st.markdown('<div class="panel-title">📊 Watchlist</div>', unsafe_allow_html=True)
         selected_symbol = render_watchlist_panel(selected_symbol)
         set_selected_symbol(selected_symbol)
-        
-        # Portfolio Panel (tabbed or expandable)
-        st.markdown("<br>")
-        with st.expander("💼 Portfolio", expanded=False):
-            render_portfolio_panel()
-        
-        # News Feed (compact in watchlist column)
-        st.markdown("<br>")
-        render_news_feed(selected_symbol, limit=3)
+        st.markdown('</div>', unsafe_allow_html=True)
     
     with col_main:
         # Main Chart Area
         try:
-            # Use new multi-stock function (works for any symbol, defaults to TSLA)
             df, live_data, status_msg = get_stock_data(selected_symbol)
+            
+            # Display clean dashboard header
+            if live_data:
+                display_dashboard_header(selected_symbol, live_data)
             
             # Display status message
             st.markdown(f'<div class="status-message">{status_msg}</div>', unsafe_allow_html=True)
             
             # Check if we have data
-            if df.empty or not live_data:
-                st.warning(f"⚠️ No data available for {selected_symbol}. Please check your API key configuration.")
+            if df.empty and not live_data:
+                st.warning(f"⚠️ No data available for {selected_symbol}.")
+                st.info("Please check your internet connection and try again.")
                 return
+            elif df.empty:
+                st.info(f"📊 Loading historical data for {selected_symbol}...")
+            elif not live_data:
+                st.info(f"📊 Using historical data for {selected_symbol}.")
             
-            # Display price and change
-            current_price = live_data.get("current_price")
-            prev_close = live_data.get("prev_close")
-            display_price_and_change(current_price, prev_close)
+            # Chart Panel
+            st.markdown('<div class="dashboard-panel">', unsafe_allow_html=True)
+            st.markdown(f'<div class="panel-title">📈 Historical Candlestick Chart - {selected_symbol}</div>', unsafe_allow_html=True)
             
-            # Display market status
-            market_status = live_data.get("market_status", "unknown")
-            display_market_status(market_status)
-            
-            # Spacer
-            st.markdown("<br>", unsafe_allow_html=True)
-            
-            # Display metrics
-            display_metrics(live_data)
-            
-            # Spacer
-            st.markdown("<br><br>", unsafe_allow_html=True)
-            
-            # Chart with technical indicators
+            # Chart
             if not df.empty:
-                # Get technical indicators if available
-                from data_processor import StockDataProcessor
-                processor = StockDataProcessor()
-                indicators = processor.get_technical_indicators_data(selected_symbol, ['RSI', 'MACD'])
-                
-                fig = create_candlestick_chart(df, days=30, symbol=selected_symbol, indicators=indicators)
+                fig = create_candlestick_chart(df, days=30, symbol=selected_symbol)
                 chart_filename = f"{selected_symbol.lower()}_chart"
                 st.plotly_chart(
                     fig, 
@@ -310,42 +271,25 @@ def main():
                         "displayModeBar": True,
                         "displaylogo": False,
                         "modeBarButtonsToRemove": ["lasso2d", "select2d"],
-                        "modeBarButtonsToAdd": ["resetScale2d"],
                         "toImageButtonOptions": {
                             "format": "png",
                             "filename": chart_filename,
                             "height": 600,
                             "width": 1200,
                             "scale": 1
-                        },
-                        "doubleClick": "reset",
-                        "doubleClickDelay": 300,
-                        "showTips": True,
-                        "responsive": True,
-                        "editable": False
+                        }
                     }
                 )
             else:
                 st.info("📊 Chart data will appear once historical data is loaded.")
-        
-        except KeyError as e:
-            st.error(f"🔑 Configuration Error: {str(e)}")
-            st.info("""
-            **Setup Instructions:**
-            1. Create a `.streamlit` folder in your project directory
-            2. Create `secrets.toml` inside `.streamlit`
-            3. Add your Polygon API key:
-               ```
-               POLYGON_API_KEY = "your_api_key_here"
-               ```
-            4. Get your free API key at: https://polygon.io/
-            """)
+            
+            st.markdown('</div>', unsafe_allow_html=True)
         
         except Exception as e:
-            st.error(f"❌ Error: {str(e)}")
-            st.info("The app encountered an error. Please check your API key and internet connection.")
+            error_str = str(e)
+            st.error(f"❌ Error: {error_str}")
+            st.info("Please check your internet connection and try again.")
 
 
 if __name__ == "__main__":
     main()
-
