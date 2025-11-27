@@ -1,6 +1,6 @@
 """
 Watchlist UI Components for Streamlit
-Provides watchlist management interface with add/remove functionality.
+Simplified version using yfinance.
 """
 
 import streamlit as st
@@ -12,6 +12,7 @@ from database import (
     is_in_watchlist
 )
 from utils import get_default_watchlist, format_stock_name, get_watchlist_stocks_data
+from stock_list import load_nasdaq_stocks, search_stocks
 
 
 def render_watchlist_panel(selected_symbol: str = "TSLA"):
@@ -41,34 +42,54 @@ def render_watchlist_panel(selected_symbol: str = "TSLA"):
             session.commit()
         
         # Get live data for all watchlist stocks
-        live_data = get_watchlist_stocks_data(watchlist_symbols)
+        live_data = {}
+        try:
+            live_data = get_watchlist_stocks_data(watchlist_symbols)
+        except Exception as e:
+            # If API fails, show placeholder data
+            pass
         
-        # Display watchlist header
-        st.markdown("### 📊 Watchlist")
+        # Add stock input with autocomplete
+        st.markdown("**Add Stock to Watchlist**")
         
-        # Add stock input
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            new_symbol = st.text_input(
-                "Add Stock",
-                placeholder="e.g., AAPL, MSFT",
-                key="add_stock_input",
-                label_visibility="collapsed"
-            )
-        with col2:
-            if st.button("➕", key="add_stock_btn", help="Add stock to watchlist"):
-                if new_symbol and len(new_symbol.strip()) > 0:
-                    symbol_upper = new_symbol.strip().upper()
-                    if not is_in_watchlist(session, symbol_upper):
-                        add_to_watchlist(session, symbol_upper)
-                        st.rerun()
+        # Load all NASDAQ stocks
+        all_stocks = load_nasdaq_stocks()
+        
+        # Search input
+        search_query = st.text_input(
+            "🔍 Search stocks",
+            placeholder="Start typing...",
+            key="stock_search_input",
+            label_visibility="visible"
+        )
+        
+        # Show suggestions as you type (like Google) - appears when you type
+        if search_query and len(search_query.strip()) > 0:
+            filtered_stocks = search_stocks(search_query.strip(), all_stocks, limit=10)
+            
+            if filtered_stocks:
+                # Simple clickable suggestions (Google-like)
+                for stock in filtered_stocks:
+                    symbol = stock['symbol']
+                    name = stock['name']
+                    already_added = is_in_watchlist(session, symbol)
+                    
+                    if already_added:
+                        st.markdown(f"**{symbol}** - {name} ✓ Added")
                     else:
-                        st.warning(f"{symbol_upper} is already in watchlist")
+                        if st.button(f"**{symbol}** - {name}", key=f"add_{symbol}", use_container_width=True):
+                            add_to_watchlist(session, symbol)
+                            st.rerun()
+            else:
+                st.info("No stocks found")
         
-        st.markdown("---")
+        st.markdown('<div style="margin: 0.75rem 0;"></div>', unsafe_allow_html=True)
         
         # Display watchlist stocks
         for symbol in watchlist_symbols:
+            if not symbol or not isinstance(symbol, str):
+                continue
+                
             stock_data = live_data.get(symbol, {})
             current_price = stock_data.get("current_price")
             prev_close = stock_data.get("prev_close")
@@ -82,8 +103,20 @@ def render_watchlist_panel(selected_symbol: str = "TSLA"):
             
             # Determine if selected
             is_selected = (symbol == selected_symbol)
-            border_color = "#ff0000" if is_selected else "#333333"
-            bg_color = "#1e2e1e" if is_selected else "#1e1e1e"
+            border_color = "#007bff" if is_selected else "#e0e0e0"
+            bg_color = "#f0f8ff" if is_selected else "#ffffff"
+            
+            # Format stock name
+            formatted_name = format_stock_name(symbol) if symbol else symbol.upper()
+            
+            # Format price and change
+            price_display = f"${current_price:,.2f}" if current_price else "N/A"
+            change_display = "N/A"
+            change_color = "#888888"
+            if current_price and prev_close:
+                change_sign = "+" if change_amount >= 0 else ""
+                change_display = f"{change_sign}{change_percent:.2f}%"
+                change_color = "#28a745" if change_amount >= 0 else "#dc3545"
             
             # Stock card
             with st.container():
@@ -92,23 +125,20 @@ def render_watchlist_panel(selected_symbol: str = "TSLA"):
                     <div style="
                         background-color: {bg_color};
                         border: 2px solid {border_color};
-                        border-radius: 8px;
+                        border-radius: 6px;
                         padding: 0.75rem;
-                        margin-bottom: 0.5rem;
-                        cursor: pointer;
+                        margin-bottom: 0.75rem;
                     ">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div>
-                                <strong style="font-size: 1.1rem;">{format_stock_name(symbol)}</strong>
-                                <br>
-                                <span style="color: #888888; font-size: 0.9rem;">{symbol}</span>
+                                <strong style="font-size: 1rem; color: #333333;">{symbol}</strong>
                             </div>
                             <div style="text-align: right;">
-                                <div style="font-size: 1.1rem; font-weight: 600;">
-                                    ${current_price:,.2f if current_price else 'N/A'}
+                                <div style="font-size: 1rem; font-weight: 600; color: #333333;">
+                                    {price_display}
                                 </div>
-                                <div style="color: {'#00ff00' if change_amount >= 0 else '#ff0000'}; font-size: 0.85rem;">
-                                    {('+' if change_amount >= 0 else '') + f'{change_percent:.2f}%' if current_price and prev_close else 'N/A'}
+                                <div style="color: {change_color}; font-size: 0.8rem; font-weight: 500;">
+                                    {change_display}
                                 </div>
                             </div>
                         </div>
@@ -117,14 +147,14 @@ def render_watchlist_panel(selected_symbol: str = "TSLA"):
                     unsafe_allow_html=True
                 )
                 
-                # Click handler - use button for selection
-                col1, col2 = st.columns([4, 1])
+                # Action buttons
+                col1, col2 = st.columns([3, 1])
                 with col1:
-                    if st.button(f"View {symbol}", key=f"view_{symbol}", use_container_width=True):
+                    if st.button(f"📈 View", key=f"view_{symbol}", use_container_width=True):
                         st.session_state.selected_symbol = symbol
                         st.rerun()
                 with col2:
-                    if st.button("❌", key=f"remove_{symbol}", help=f"Remove {symbol}"):
+                    if st.button("🗑️", key=f"remove_{symbol}"):
                         remove_from_watchlist(session, symbol)
                         st.rerun()
         
@@ -153,4 +183,3 @@ def get_selected_symbol() -> str:
 def set_selected_symbol(symbol: str):
     """Set the selected stock symbol in session state."""
     st.session_state.selected_symbol = symbol.upper()
-
