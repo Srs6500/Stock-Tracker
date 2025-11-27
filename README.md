@@ -1,24 +1,23 @@
-# Stock Pulse - Real-Time Stock Dashboard (Bloomberg-lite)
+# StockTracker - Real-Time Stock Dashboard
 
-A professional, multi-stock monitoring dashboard built with Streamlit. Originally focused on Tesla (TSLA), now expanded to support multiple stocks with Bloomberg Terminal-inspired features.
+A professional, multi-stock monitoring dashboard built with Streamlit. Track multiple stocks with real-time data, interactive charts, and portfolio management.
 
 ## Features
 
 ### Core Stock Monitoring
 - 📊 **Live Stock Data**: Real-time price, daily high/low, previous close, volume for any stock
-- 📈 **Interactive Charts**: 30-day candlestick charts with volume bars and technical indicators
-- 🔄 **Auto-Refresh**: Optional 15-second auto-refresh for live market updates
-- 💾 **Local Caching**: SQLite database for offline capability and API call optimization
-- 🎨 **Dark Mode UI**: Professional fintech-style interface with customizable accents
+- 📈 **Interactive Charts**: 30-day candlestick charts with volume bars
+- 🔄 **Real-Time Updates**: Fresh data on every page refresh
+- 💾 **SQLite Database**: Local storage for watchlist and portfolio data
+- 🎨 **Clean UI**: Professional, modern interface with centered design
 - 📱 **Mobile Responsive**: Works beautifully on all devices
 
-### Bloomberg-lite Features
+### Key Features
 - 📋 **Multi-Stock Watchlist**: Track multiple stocks simultaneously with live price updates
+- 🔍 **Google-like Search**: Dynamic autocomplete search for finding stocks quickly
 - 💼 **Portfolio Tracker**: Manage holdings, track P&L, and monitor portfolio performance
-- 📰 **News Feed**: Real-time financial news for tracked stocks
-- 📊 **Technical Indicators**: SMA (20, 50), RSI, MACD overlays on charts
+- 📊 **Technical Indicators**: SMA (20, 50) overlays on charts
 - 🔄 **Stock Comparison**: Compare multiple stocks with normalized percentage charts
-- 🔌 **Multi-API Support**: Unified wrapper supporting Polygon.io, Alpha Vantage, and NewsAPI
 
 ## Setup Instructions
 
@@ -28,35 +27,9 @@ A professional, multi-stock monitoring dashboard built with Streamlit. Originall
 pip install -r requirements.txt
 ```
 
-### 2. Get API Keys
+### 2. Run the App
 
-**Required:**
-- **Polygon.io**: Sign up for a free account at [polygon.io](https://polygon.io/) and get your API key
-
-**Optional (for enhanced features):**
-- **Alpha Vantage**: Get free API key at [alphavantage.co](https://www.alphavantage.co/support/#api-key) (for technical indicators)
-- **NewsAPI**: Get free API key at [newsapi.org](https://newsapi.org/register) (for news feed)
-
-### 3. Configure API Keys
-
-Create a `.streamlit` folder in the project root, then create `secrets.toml`:
-
-```bash
-mkdir .streamlit
-```
-
-Copy `secrets.toml.example` to `.streamlit/secrets.toml` and add your API keys:
-
-```toml
-# Required
-POLYGON_API_KEY = "your_polygon_api_key_here"
-
-# Optional (for enhanced features)
-ALPHA_VANTAGE_API_KEY = "your_alpha_vantage_key_here"
-NEWSAPI_KEY = "your_newsapi_key_here"
-```
-
-### 4. Run the App
+**No API keys required!** StockTracker uses yfinance, which provides free stock data without authentication.
 
 ```bash
 streamlit run app.py
@@ -67,53 +40,49 @@ The app will open in your browser at `http://localhost:8501`
 ## How It Works
 
 ### Data Flow
-1. **First Launch**: Fetches historical data from Polygon API and stores in SQLite database
-2. **Subsequent Launches**: Loads from local database (fast!) and only fetches fresh data when needed
-3. **Auto-Refresh**: When enabled, updates live data every 15 seconds during market hours
-4. **Offline Mode**: Works with cached data if API is unavailable
+1. **Data Source**: Uses yfinance to fetch real-time and historical stock data
+2. **Fresh Data**: Fetches fresh data on every page refresh for up-to-date prices
+3. **Local Storage**: SQLite database stores watchlist and portfolio data locally
+4. **No API Keys**: Completely free - no authentication required
 
 ### Architecture
-- **API Wrapper**: Unified interface for multiple data sources (Polygon, Alpha Vantage, NewsAPI)
-- **Data Processor**: Intelligent caching layer with database-first strategy
+- **yfinance Client**: Simplified data fetching using Yahoo Finance
+- **SQLite Database**: Local storage for watchlist and portfolio
 - **Multi-Stock Support**: Generic database models support any stock symbol
-- **Modular Design**: Separate UI components for watchlist, portfolio, news, and charts
+- **Modular Design**: Separate UI components for watchlist, portfolio, and charts
 
 ## Project Structure
 
 ```
 .
-├── app.py                 # Main Streamlit application (Bloomberg-lite layout)
+├── app.py                 # Main Streamlit application
 ├── database.py            # Database models (multi-stock support)
-├── api_client.py          # Polygon API integration
-├── api_wrapper.py         # Multi-API wrapper (Polygon, Alpha Vantage, NewsAPI)
-├── data_processor.py      # Unified data processing and caching layer
+├── yfinance_client.py     # Yahoo Finance data fetching
 ├── utils.py               # Data processing utilities
 ├── charts.py              # Plotly candlestick charts with indicators
 ├── comparison_charts.py   # Stock comparison visualization
 ├── watchlist_ui.py        # Watchlist management UI component
 ├── portfolio_ui.py        # Portfolio tracker UI component
-├── news_ui.py             # News feed UI component
-├── test_compatibility.py  # Backward compatibility test suite
+├── stock_list.py          # NASDAQ stock list for search
 ├── requirements.txt       # Python dependencies
-├── secrets.toml.example   # API key template
 └── tsla_data.db          # SQLite database (created automatically)
 ```
 
 ## Usage Tips
 
-- **Watchlist**: Add stocks by typing symbol (e.g., AAPL, MSFT) and clicking Add
+- **Watchlist**: Use the Google-like search to find stocks by symbol or company name, then click Add
 - **Portfolio**: Track your holdings with purchase price and quantity for P&L calculations
 - **Charts**: Use autoscale/reset buttons or double-click to reset chart view
-- **Technical Indicators**: SMA lines appear automatically; RSI/MACD available with Alpha Vantage API key
-- **News Feed**: Shows latest financial news for selected stock (requires NewsAPI key)
+- **Technical Indicators**: SMA (20, 50) lines appear automatically on charts
+- **Search**: Start typing in the watchlist search box - suggestions appear as you type
 
 ## Notes
 
 - Database file (`tsla_data.db`) is created automatically on first run
-- Free Polygon tier has rate limits; the app caches data to minimize API calls
+- Data is fetched fresh on every page refresh for real-time accuracy
 - Market status shows: Open (green), Closed (red), After Hours (orange)
-- All features work with Polygon API alone; optional APIs enhance functionality
-- Backward compatible: Original TSLA-focused functions still work
+- No API keys required - completely free to use
+- Search includes 65 major NASDAQ stocks (expandable via CSV - see STOCK_LIST_README.md)
 
 ## See Also
 
