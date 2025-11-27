@@ -1,6 +1,6 @@
-# Stock Pulse - Complete Feature List
+# StockTracker - Complete Feature List
 
-Comprehensive documentation of all features in the Stock Pulse dashboard (Bloomberg-lite edition).
+Comprehensive documentation of all features in the StockTracker dashboard.
 
 ## 📊 Core Stock Monitoring
 
@@ -14,9 +14,9 @@ Comprehensive documentation of all features in the Stock Pulse dashboard (Bloomb
 
 ### Historical Data
 - **30-Day View**: Last 30 trading days of OHLCV data
-- **Database Caching**: Automatic storage of historical data in SQLite
-- **Offline Support**: Works with cached data when API is unavailable
-- **Smart Fetching**: Only fetches new data when needed (database-first strategy)
+- **Fresh Data**: Fetches fresh data on every page refresh
+- **Real-Time Accuracy**: Always up-to-date with latest market data
+- **yfinance Integration**: Uses Yahoo Finance for reliable stock data
 
 ## 📈 Charting & Visualization
 
@@ -30,8 +30,6 @@ Comprehensive documentation of all features in the Stock Pulse dashboard (Bloomb
 ### Technical Indicators
 - **SMA 20**: 20-day Simple Moving Average (automatically calculated)
 - **SMA 50**: 50-day Simple Moving Average (automatically calculated)
-- **RSI**: Relative Strength Index (requires Alpha Vantage API key)
-- **MACD**: Moving Average Convergence Divergence (requires Alpha Vantage API key)
 - **Visual Overlays**: Indicators displayed as lines on the main chart
 
 ### Stock Comparison
@@ -42,12 +40,13 @@ Comprehensive documentation of all features in the Stock Pulse dashboard (Bloomb
 ## 📋 Watchlist Management
 
 ### Multi-Stock Tracking
-- **Add Stocks**: Add any stock symbol to watchlist (e.g., AAPL, MSFT, GOOGL)
+- **Google-like Search**: Dynamic autocomplete search for finding stocks quickly
+- **Add Stocks**: Search by symbol or company name, then add to watchlist
 - **Remove Stocks**: Remove stocks from watchlist with one click
 - **Live Updates**: Real-time price updates for all watchlist stocks
 - **Stock Cards**: Visual cards showing symbol, price, and change
 - **Quick Selection**: Click any stock to view detailed chart and metrics
-- **Default Watchlist**: Pre-populated with popular stocks (TSLA, AAPL, MSFT, GOOGL, AMZN)
+- **65 NASDAQ Stocks**: Pre-loaded list of major NASDAQ stocks for search
 
 ### Watchlist Features
 - **Persistent Storage**: Watchlist saved in database across sessions
@@ -75,32 +74,18 @@ Comprehensive documentation of all features in the Stock Pulse dashboard (Bloomb
 - **Color Indicators**: Green for profits, red for losses
 - **Real-Time Updates**: Automatic recalculation on price updates
 
-## 📰 News Feed
-
-### Financial News
-- **Stock-Specific News**: Latest news articles for selected stock
-- **Headline Display**: Article titles with publication dates
-- **Source Attribution**: News source and author information
-- **Compact View**: Efficient news feed in sidebar
-- **Configurable Limit**: Adjustable number of articles displayed
-
-### News Integration
-- **NewsAPI Integration**: Uses NewsAPI for financial news (optional)
-- **Fallback Handling**: Graceful degradation if API key not provided
-- **Real-Time Updates**: News refreshed with stock data updates
-
-## 🔄 Auto-Refresh & Updates
+## 🔄 Data Updates
 
 ### Refresh Mechanism
-- **15-Second Intervals**: Configurable auto-refresh every 15 seconds
-- **Toggle Control**: Enable/disable auto-refresh via settings
+- **Page Refresh**: Fresh data on every page refresh
+- **Real-Time Data**: Always fetches latest market data
 - **Manual Refresh**: Streamlit's built-in refresh capability
-- **Smart Caching**: Prevents unnecessary API calls with 60-second cache TTL
+- **No Caching**: Direct data fetching ensures accuracy
 
 ### Update Strategy
-- **Database-First**: Always checks local database before API calls
-- **Incremental Updates**: Only fetches missing or stale data
-- **Error Handling**: Graceful fallback to cached data on API errors
+- **Fresh on Demand**: Fetches new data whenever page is refreshed
+- **yfinance Integration**: Reliable data source with no rate limits
+- **Error Handling**: Clear error messages if data unavailable
 
 ## 💾 Data Management
 
@@ -111,25 +96,25 @@ Comprehensive documentation of all features in the Stock Pulse dashboard (Bloomb
 - **Watchlist Persistence**: User watchlist saved across sessions
 - **Portfolio Persistence**: Portfolio holdings saved in database
 
-### Caching Strategy
-- **Intelligent Caching**: Database-first approach minimizes API calls
-- **Offline Mode**: Full functionality with cached data
-- **Data Freshness**: Automatic detection of stale data
-- **API Rate Limit Protection**: Reduces API calls to stay within free tier limits
+### Data Strategy
+- **Fresh Data**: Always fetches latest data on page refresh
+- **SQLite Storage**: Local storage for watchlist and portfolio only
+- **No Rate Limits**: yfinance provides free data without authentication
+- **Simple Architecture**: Direct data fetching for reliability
 
 ## 🎨 User Interface
 
 ### Design Features
-- **Dark Mode**: Professional dark theme with customizable accents
-- **Tesla-Red Accents**: Original TSLA branding (customizable)
+- **Clean UI**: Professional, modern interface with centered design
+- **StockTracker Branding**: Clean, focused branding
 - **Responsive Layout**: Works on desktop, tablet, and mobile
-- **Bloomberg-lite Layout**: Multi-panel professional terminal-style interface
+- **Streamlined Layout**: Multi-panel professional interface
 
 ### Layout Components
-- **Left Panel**: Watchlist, Portfolio, News Feed
+- **Left Panel**: Watchlist, Portfolio
 - **Right Panel**: Main chart area with metrics
-- **Settings Expander**: Integrated settings (no sidebar clutter)
-- **Status Indicators**: Visual market status and data source indicators
+- **Centered Title**: Prominent StockTracker branding
+- **Status Indicators**: Visual market status indicators
 
 ### User Experience
 - **Intuitive Navigation**: Click stocks to view details
@@ -137,25 +122,21 @@ Comprehensive documentation of all features in the Stock Pulse dashboard (Bloomb
 - **Error Messages**: Clear, helpful error messages with setup instructions
 - **Loading States**: Visual indicators during data fetching
 
-## 🔌 API Integration
+## 🔌 Data Integration
 
-### Multi-API Support
-- **Polygon.io**: Primary data source (required)
+### Data Source
+- **yfinance**: Primary and only data source
   - Historical OHLCV data
   - Live price snapshots
   - Market status
-- **Alpha Vantage**: Optional technical indicators
-  - RSI calculation
-  - MACD calculation
-- **NewsAPI**: Optional news feed
-  - Financial news articles
-  - Stock-specific headlines
+  - No API keys required
+  - Free and reliable
 
-### API Wrapper
-- **Unified Interface**: Single interface for multiple APIs
-- **Fallback Mechanisms**: Graceful degradation when APIs unavailable
+### Data Client
+- **Simplified Interface**: Direct yfinance integration
 - **Error Handling**: Robust error handling with user-friendly messages
-- **Rate Limit Management**: Built-in protection against API rate limits
+- **No Authentication**: Works out of the box
+- **No Rate Limits**: Free tier with no restrictions
 
 ## 🛠️ Technical Features
 
@@ -186,20 +167,19 @@ Comprehensive documentation of all features in the Stock Pulse dashboard (Bloomb
 ### Requirements
 - **Python 3.8+**: Compatible with modern Python versions
 - **Dependencies**: All listed in `requirements.txt`
-- **API Keys**: Polygon.io required; others optional
+- **No API Keys**: Works completely free with yfinance
 
-## 🔐 Security & Configuration
+## 🔐 Configuration
 
-### API Key Management
-- **Streamlit Secrets**: Secure API key storage via `.streamlit/secrets.toml`
-- **Template File**: `secrets.toml.example` provides setup guidance
-- **No Hardcoding**: All sensitive data in secrets file
-- **Git Ignore**: Secrets file excluded from version control
+### Setup
+- **No Configuration Needed**: Works out of the box
+- **No API Keys**: yfinance requires no authentication
+- **Simple Installation**: Just install dependencies and run
 
-### Configuration
-- **Optional Features**: Enhanced features work without optional API keys
-- **Graceful Degradation**: App works with just Polygon API key
-- **Clear Instructions**: Setup guide in README and secrets template
+### Optional Configuration
+- **Secrets File**: Optional `.streamlit/secrets.toml` for future features
+- **Database**: SQLite database created automatically
+- **Clear Instructions**: Setup guide in README
 
 ## 📚 Documentation
 
@@ -224,5 +204,5 @@ Comprehensive documentation of all features in the Stock Pulse dashboard (Bloomb
 
 ---
 
-*Last Updated: December 2024*
+*Last Updated: January 2025*
 
